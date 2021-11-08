@@ -17,15 +17,15 @@ Please use with userscript:
 Base URL:
 
 ```
-mpv://play/BASE64_ENCODE_VIDEO_URL/
+mpv://play/BASE64_ENCODED_VIDEO_URL/
 ```
 
 Optional parameters:
 
 ```
-cookies     = [ www.domain.com.txt ]
-downloader  = [ mpv, ytdl, you-get, streamlink, and more...] (default: mpv)
-quality     = [ best, 2160p, 1440p, 1080p, 720p, 480p, 360p, and more... ]
+cookies     = [ true, false ]
+downloader  = [ ytdl ] (default: ytdl)
+quality     = [ best, 2160p, 1440p, 1080p, 720p, 480p, 360p ]
 
 c = cookies
 d = downloader
@@ -35,9 +35,9 @@ q = quality
 Example:
 
 ```
-mpv://play/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1HZ2tuMmY1ZS1JVQ==/?cookies=www.youtube.com.txt&downloader=mpv&quality=best
+mpv://play/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1HZ2tuMmY1ZS1JVQ==/?cookies=true&downloader=ytdl&quality=best
 
-mpv://play/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1EcnZ1c29zekJLQQ==/?c=www.youtube.com.txt&d=mpv&q=best
+mpv://play/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1EcnZ1c29zekJLQQ==/?c=true&d=ytdl&q=best
 ```
 
 ## Installation
@@ -55,15 +55,12 @@ mpv://play/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g/dj1EcnZ1c29zekJLQQ==/?c=www.y
 2. Unzip the archive
 3. Copy `mpv-handler` to `$HOME/.local/bin`
 4. Copy `mpv-handler.desktop` to `$HOME/.local/share/applications/`
-5. Copy `config.toml` to `$HOME/.config/mpv-handler/`
-6. Add `$HOME/.local/bin` to your environment variable `PATH` (if it not lists in your `PATH`)
-7. Register xdg-mime (thanks for the [linuxuprising][linuxuprising] reminder)
+5. Add `$HOME/.local/bin` to your environment variable `PATH` (if it not lists in your `PATH`)
+6. Register xdg-mime (thanks for the [linuxuprising][linuxuprising] reminder)
 
 ```
 $ xdg-mime default mpv-handler.desktop x-scheme-handler/mpv
 ```
-
-8. Create `$HOME/.config/mpv-handler/custom.toml` and edit it, if needed
 
 ### Windows
 
@@ -74,7 +71,6 @@ Windows users need to install `mpv-handler` manually.
 1. Download [latest/mpv-handler-windows-x64.zip][download-windows]
 2. Unzip the archive to the directory you want (since v0.2.x, not requires to install in the same directory with `mpv` anymore)
 3. Run `handler-install.bat` register protocol handler
-4. Create `custom.toml` in the same directory as `mpv-handler.exe` and edit it
 
 [badges-aur-git]: https://img.shields.io/aur/version/mpv-handler-git?label=mpv-handler-git&style=for-the-badge
 [badges-aur]: https://img.shields.io/aur/version/mpv-handler?label=mpv-handler&style=for-the-badge
@@ -88,121 +84,7 @@ Windows users need to install `mpv-handler` manually.
 
 ## Configuration
 
-### Default configuration
-
 ```toml
-# Don't edit this file!
-# This is default settings, It will be overwritten when update mpv-handler
-#
-# For customize settings, create and edit file:
-# - Linux:
-#     - $HOME/.config/mpv-handler/custom.toml
-#     - /etc/mpv-handler/custom.toml
-#     If the first one is found, the second one will not be loaded
-# - Windows: custom.toml
-#     In the same directory as mpv-handler.exe
-
-### Player ###
-player = "/usr/bin/mpv"
-
-### Video Downloader ###
-[mpv]
-bin = "/usr/bin/mpv"
-cookies = "--ytdl-raw-options-append=cookies="
-cookies_prefix = true
-play_mode = "direct"
-quality.best = "--ytdl-format=bestvideo+bestaudio/best"
-quality.2160p = "--ytdl-format=bestvideo[height<=2160]+bestaudio/best[height<=2160]/best"
-quality.1440p = "--ytdl-format=bestvideo[height<=1440]+bestaudio/best[height<=1440]/best"
-quality.1080p = "--ytdl-format=bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
-quality.720p = "--ytdl-format=bestvideo[height<=720]+bestaudio/best[height<=720]/best"
-quality.480p = "--ytdl-format=bestvideo[height<=480]+bestaudio/best[height<=480]/best"
-quality.360p = "--ytdl-format=bestvideo[height<=360]+bestaudio/best[height<=360]/best"
+mpv = "/usr/bin/mpv"
+ytdl = "/usr/bin/yt-dlp"
 ```
-
-### Custom configuration
-
-Generally, users need to change `player` and downloader `bin` to its executable binary.
-
-For this, users can create `custom.toml` to overwrite default settings:
-
-```toml
-player = "/usr/bin/vlc"
-ld_path = "/usr/lib/:/usr/local/lib"
-
-# player    Required, Type: String
-#             The player executable binary path
-#             For Windows users:
-#             The path can be "C:\\folder\\some.exe" or "C:/folder/some.exe"
-# ld_path   Optional, Type: String (Linux only)
-#             Set environment variable "LD_LIBRARY_PATH" for player and downloader
-#             Use ":" to separate paths
-#             For more details about this option, see:
-#             https://github.com/akiirui/mpv-handler/commit/4ad298ddd82bc3fa0303f8cc11474df506531d33
-
-# Warning:
-# Users are not recommended to change default downloader settings except "bin"
-#
-# If you've changed "quality.LEVEL" for default downloader
-# You will lost other "quality.LEVEL" from default settings
-[mpv]
-bin = "/usr/local/bin/mpv"
-
-# bin       Required, Type: String
-#             The downloader executable binary path
-#             For Windows users:
-#             The path can be "C:\\folder\\some.exe" or "C:/folder/some.exe"
-```
-
-### Custom downloader
-
-By default, `mpv-handler` only has a downloader `mpv`.
-
-If users need other downloader for special purpose, users need to add a custom downloader.
-
-```toml
-# For advanced user, you can add other downloader manually
-# Append your custom downloader to the "custom.toml"
-#
-# Example:
-[example]
-bin = "/usr/bin/example"
-cookies = "--cookies"
-cookies_prefix = false
-require_quality = false
-play_mode = "normal"
-options = ["--player"]
-player_options = ["--http-header-fields='referer: https://www.domain.com'"]
-quality.best = "--quality=best"
-quality.worst = "--quality=worst"
-
-# [example]       Required, Type: String
-#                   The value "example" is downloader table name
-# bin             Required, Type: String
-#                   The downloader executable binary path
-#                   For Windows users:
-#                   The path can be "C:\\folder\\some.exe" or "C:/folder/some.exe"
-# cookies         Optional, Type: String (default: "")
-#                   The downloader parameter of passthorgh cookies
-# cookies_prefix  Optional, Type: Boolen (default: false)
-#                   Set to true to mark cookies parameter as prefix
-# require_quality Optional, Type: Boolen (default: false)
-#                   Set to true to mark the downloader requires a quality LEVEL given
-# play_mode       Optional, Type: String [normal, direct, pipe] (default: "normal")
-#                   The mode of downloader to run player
-# options         Optional, Type: Array of Strings (default: [])
-#                   The parameters of downloader to set player or output
-# player_options  Optional, Type: Array of Strings (default: [])
-#                   The parameters of player for some special purposes
-# quality.LEVEL   Optional, Type: String
-#                   The LEVEL is a key name
-#                   The value is parameter of downloader to choose quality/format
-```
-
-### Downloader examples
-
-See [share/examples][examples].
-
-Welcome to share your custom downloader!
-
-[examples]: https://github.com/akiirui/mpv-handler/tree/main/share/examples

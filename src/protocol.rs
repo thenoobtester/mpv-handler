@@ -1,51 +1,41 @@
-use thiserror::Error;
+use crate::error::{Error, Result};
 
-const DEFAULT_DOWNLOADER: &str = "mpv";
-
-#[derive(Error, Debug)]
-pub enum ProtocolError {
-    #[error("Error: Wrong protocol URL")]
-    WrongProtocol,
-    #[error("Error: Failed to decode video URL data: {0}")]
-    WrongProtocolBase64(#[from] base64::DecodeError),
-    #[error("Error: Failed to convert video URL string: {0}")]
-    WrongProtocolFromUtf8(#[from] std::string::FromUtf8Error),
-    #[error("Error: Not found video URL")]
-    MissingVideoUrl,
-}
+const DEFAULT_DOWNLOADER: &str = "ytdl";
 
 #[derive(Debug)]
 pub struct Protocol {
-    pub cookies: String,
+    pub cookies: bool,
     pub downloader: String,
-    pub quality: String,
+    pub quality: i32,
     pub url: String,
 }
 
 impl Protocol {
-    /// Parse the protocol URL
-    pub fn parse(arg: &mut String) -> Result<Protocol, ProtocolError> {
-        if arg.starts_with("mpv://play/") {
-            arg.replace_range(0.."mpv://play/".len(), "");
-        } else {
-            return Err(ProtocolError::WrongProtocol);
+    fn new() -> Self {
+        Protocol {
+            cookies: false,
+            downloader: String::from(DEFAULT_DOWNLOADER),
+            quality: 0,
+            url: String::new(),
+        }
+    }
+
+    pub fn parse(arg: &mut String) -> Result<Self> {
+        match arg.starts_with("mpv://play/") {
+            true => arg.replace_range(0.."mpv://play/".len(), ""),
+            false => return Err(Error::ProtocolBadUrl),
         }
 
         if arg.ends_with('/') {
             arg.pop();
         }
 
-        let mut protocol = Protocol {
-            cookies: String::new(),
-            downloader: String::from(DEFAULT_DOWNLOADER),
-            quality: String::new(),
-            url: String::new(),
-        };
+        let mut protocol = Protocol::new();
         let args: Vec<&str> = arg.split("/?").collect();
 
         match args.get(0) {
-            Some(data) => protocol.url = decode_url(data)?,
-            None => return Err(ProtocolError::MissingVideoUrl),
+            Some(data) => parse_url(&mut protocol, data)?,
+            None => return Err(Error::ProtocolVideoUrlNotFound),
         };
 
         match args.get(1) {
@@ -57,12 +47,12 @@ impl Protocol {
 
                     let option_name: &str = match option_data.get(0) {
                         Some(name) => *name,
-                        None => return Err(ProtocolError::WrongProtocol),
+                        None => return Err(Error::ProtocolOptionBadKey),
                     };
 
                     let option_value: &str = match option_data.get(1) {
                         Some(value) => *value,
-                        None => return Err(ProtocolError::WrongProtocol),
+                        None => return Err(Error::ProtocolOptionBadValue),
                     };
 
                     parse_option(&mut protocol, option_name, option_value)?;
@@ -71,35 +61,28 @@ impl Protocol {
             None => {}
         };
 
-        // Check required options are already exists
-        if protocol.url.len() == 0 {
-            return Err(ProtocolError::MissingVideoUrl);
-        }
-
         Ok(protocol)
     }
 }
 
-/// Get the video url from base64 encoded data
-fn decode_url(data: &&str) -> Result<String, ProtocolError> {
+/// Get the video url from base64 data
+fn parse_url(protocol: &mut Protocol, data: &&str) -> Result<()> {
     match data.len() {
-        0 => Err(ProtocolError::MissingVideoUrl),
-        _ => Ok(String::from_utf8(base64::decode(data)?)?),
-    }
+        0 => return Err(Error::ProtocolVideoUrlNotFound),
+        _ => protocol.url = String::from_utf8(base64::decode(data)?)?,
+    };
+
+    Ok(())
 }
 
-/// Parse the options
-fn parse_option(
-    protocol: &mut Protocol,
-    option_name: &str,
-    option_value: &str,
-) -> Result<(), ProtocolError> {
+/// Get the optional parameters
+fn parse_option(protocol: &mut Protocol, option_name: &str, option_value: &str) -> Result<()> {
     match option_name {
-        "c" | "cookies" => protocol.cookies = option_value.to_string(),
+        "c" | "cookies" => protocol.cookies = option_value.parse()?,
         "d" | "downloader" => protocol.downloader = option_value.to_string(),
-        "q" | "quality" => protocol.quality = option_value.to_string(),
-        _ => return Err(ProtocolError::WrongProtocol),
-    }
+        "q" | "quality" => protocol.quality = option_value.parse()?,
+        _ => return Err(Error::ProtocolOptionNotFound),
+    };
 
     Ok(())
 }

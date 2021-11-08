@@ -1,26 +1,45 @@
 mod config;
-mod handler;
+mod downloader;
+mod error;
 mod protocol;
 
-fn main() {
-    let handler = match handler::Handler::new() {
-        Ok(handler) => handler,
-        Err(error) => {
-            pause(error);
-            std::process::exit(1);
-        }
+use config::Config;
+use downloader::ytdl;
+use error::{Error, Result};
+use protocol::Protocol;
+
+fn main() -> Result<()> {
+    let mut args: Vec<String> = std::env::args().collect();
+    let arg: &mut String = match args.len() {
+        2 => args.get_mut(1).unwrap(),
+        1 => return Err(Error::MainArgsNone),
+        _ => return Err(Error::MainArgsTooMany),
     };
 
-    match handler.run() {
-        Ok(_) => {}
-        Err(error) => {
-            pause(error);
-            std::process::exit(1);
-        }
-    }
+    match arg.as_str() {
+        "version" | "-v" | "-V" => version(),
+        _ => {}
+    };
+
+    let protocol = Protocol::parse(arg)?;
+    let config = Config::parse()?;
+    let info = match protocol.downloader.as_str() {
+        "ytdl" => ytdl::dump_json(),
+        _ => return Err(Error::MainDownloaderNotFound),
+    };
+
+    dbg!(&protocol);
+    dbg!(&config);
+    dbg!(&info);
+
+    Ok(())
 }
 
-fn pause(error: handler::HandlerError) {
-    eprint!("{}", error);
-    std::io::Read::read(&mut std::io::stdin(), &mut [0]).unwrap();
+/// Print `mpv-handler` version infomation
+fn version() {
+    let version: &str = option_env!("MPV_HANDLER_VERSION").unwrap_or(env!("CARGO_PKG_VERSION"));
+
+    println!("mpv-handler {}", version);
+
+    std::process::exit(0)
 }
